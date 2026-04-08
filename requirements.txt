@@ -1,0 +1,57 @@
+# ── Web scraping ──────────────────────────────────────────────────
+playwright==1.44.0
+beautifulsoup4==4.12.3
+httpx==0.27.0
+lxml==5.2.2
+
+# ── Extracción PDF ────────────────────────────────────────────────
+PyMuPDF==1.24.5
+pdfplumber==0.11.1
+pytesseract==0.3.10
+Pillow==10.3.0
+
+# ── NLP y parsing ─────────────────────────────────────────────────
+spacy==3.7.4
+https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.7.0/es_core_news_lg-3.7.0-py3-none-any.whl
+
+# ── Chunking ──────────────────────────────────────────────────────
+langchain==0.2.5
+langchain-text-splitters==0.2.2
+
+# ── Embeddings ────────────────────────────────────────────────────
+sentence-transformers==3.0.1
+torch==2.3.1
+transformers==4.41.2
+
+# ── Vector DB ─────────────────────────────────────────────────────
+chromadb==0.5.3
+
+# ── Graph DB ──────────────────────────────────────────────────────
+neo4j==5.21.0
+
+# ── Base de datos relacional ──────────────────────────────────────
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.31
+alembic==1.13.1
+
+# ── Cache ─────────────────────────────────────────────────────────
+redis==5.0.6
+
+# ── Pipeline / orquestación ───────────────────────────────────────
+prefect==2.19.7
+
+# ── LLM ───────────────────────────────────────────────────────────
+google-generativeai==0.7.2
+
+# ── LangGraph (agente) ────────────────────────────────────────────
+langgraph==0.1.14
+langchain-google-genai==1.0.6
+
+# ── Utilidades ────────────────────────────────────────────────────
+python-dotenv==1.0.1
+pydantic==2.7.4
+pydantic-settings==2.3.4
+loguru==0.7.2
+tenacity==8.3.0
+tqdm==4.66.4
+aiofiles==23.2.1
