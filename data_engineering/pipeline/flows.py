@@ -235,7 +235,7 @@ def init_pipeline() -> None:
     pf_logger.info("Insertando datos base (áreas, procesos, abogados)...")
     seed_base_data()
 
-    pf_logger.success("Sistema inicializado correctamente.")
+    pf_logger.info("Sistema inicializado correctamente.")
 
 
 # ── Entry points ──────────────────────────────────────────────────────────────

@@ -9,47 +9,48 @@ PyMuPDF==1.24.5
 pdfplumber==0.11.1
 
 # ── NLP y parsing ─────────────────────────────────────────────────
-spacy==3.7.4
-https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.7.0/es_core_news_lg-3.7.0-py3-none-any.whl
+spacy==3.8.3
+https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl
 
 # ── Chunking ──────────────────────────────────────────────────────
-langchain==0.2.5
-langchain-text-splitters==0.2.2
+langchain==0.3.14
+langchain-text-splitters==0.3.4
 
 # ── Embeddings ────────────────────────────────────────────────────
-sentence-transformers==3.0.1
-torch==2.3.1
-transformers==4.41.2
+sentence-transformers==3.3.1
+torch==2.5.1
+transformers==4.47.1
 
 # ── Vector DB ─────────────────────────────────────────────────────
-chromadb==0.5.3
+lancedb==0.17.0
+pyarrow==19.0.1
 
 # ── Graph DB ──────────────────────────────────────────────────────
-neo4j==5.21.0
+neo4j==5.27.0
 
 # ── Base de datos relacional ──────────────────────────────────────
-psycopg2-binary==2.9.9
-sqlalchemy==2.0.31
-alembic==1.13.1
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.36
+alembic==1.14.0
 
 # ── Cache ─────────────────────────────────────────────────────────
-redis==5.0.6
+redis==5.2.1
 
 # ── Pipeline / orquestación ───────────────────────────────────────
-prefect==2.19.7
+prefect==3.1.11
 
 # ── LLM ───────────────────────────────────────────────────────────
-google-generativeai==0.7.2
+google-generativeai==0.8.3
 
 # ── LangGraph (agente) ────────────────────────────────────────────
-langgraph==0.1.14
-langchain-google-genai==1.0.6
+langgraph==0.2.60
+langchain-google-genai==2.0.7
 
 # ── Utilidades ────────────────────────────────────────────────────
 python-dotenv==1.0.1
-pydantic==2.7.4
-pydantic-settings==2.3.4
-loguru==0.7.2
-tenacity==8.3.0
-tqdm==4.66.4
-aiofiles==23.2.1
+pydantic==2.10.4
+pydantic-settings==2.7.0
+loguru==0.7.3
+tenacity==9.0.0
+tqdm==4.67.1
+aiofiles==24.1.0
