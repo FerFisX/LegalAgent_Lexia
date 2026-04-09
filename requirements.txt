@@ -24,6 +24,7 @@ transformers==4.47.1
 # ── Vector DB ─────────────────────────────────────────────────────
 lancedb==0.17.0
 pyarrow==19.0.1
+pandas==2.2.3
 
 # ── Graph DB ──────────────────────────────────────────────────────
 neo4j==5.27.0
@@ -45,6 +46,13 @@ google-generativeai==0.8.3
 # ── LangGraph (agente) ────────────────────────────────────────────
 langgraph==0.2.60
 langchain-google-genai==2.0.7
+
+# ── Backend ───────────────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+email-validator==2.2.0
 
 # ── Utilidades ────────────────────────────────────────────────────
 python-dotenv==1.0.1
