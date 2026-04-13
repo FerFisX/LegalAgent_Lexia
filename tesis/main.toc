@@ -1,0 +1,77 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {chapter}{\numberline {1}Marco Referencial}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introducci\'{o}n}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Antecedentes}{2}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Antecedentes del objeto de estudio}{2}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Referencias t\'{e}cnicas de otros trabajos}{3}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}Descripci\'{o}n del contexto}{5}{subsection.1.2.3}%
+\contentsline {section}{\numberline {1.3}Descripci\'{o}n del objeto de estudio}{5}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Identificaci\'{o}n del Problema}{6}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Formulaci\'{o}n del Problema}{7}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Objetivos}{8}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}Objetivo General}{8}{subsection.1.6.1}%
+\contentsline {subsection}{\numberline {1.6.2}Objetivos Espec\'{i}ficos}{8}{subsection.1.6.2}%
+\contentsline {section}{\numberline {1.7}Justificaciones}{9}{section.1.7}%
+\contentsline {subsection}{\numberline {1.7.1}Justificaci\'{o}n t\'{e}cnica}{9}{subsection.1.7.1}%
+\contentsline {subsection}{\numberline {1.7.2}Justificaci\'{o}n social}{9}{subsection.1.7.2}%
+\contentsline {subsection}{\numberline {1.7.3}Justificaci\'{o}n econ\'{o}mica}{9}{subsection.1.7.3}%
+\contentsline {section}{\numberline {1.8}L\'{i}mites y Alcances}{10}{section.1.8}%
+\contentsline {subsection}{\numberline {1.8.1}L\'{i}mites}{10}{subsection.1.8.1}%
+\contentsline {subsection}{\numberline {1.8.2}Alcances}{10}{subsection.1.8.2}%
+\contentsline {section}{\numberline {1.9}Metodolog\'{i}a de la investigaci\'{o}n}{11}{section.1.9}%
+\contentsline {subsection}{\numberline {1.9.1}Tipo de estudio}{11}{subsection.1.9.1}%
+\contentsline {subsection}{\numberline {1.9.2}M\'{e}todos}{11}{subsection.1.9.2}%
+\contentsline {subsection}{\numberline {1.9.3}T\'{e}cnicas}{12}{subsection.1.9.3}%
+\contentsline {section}{\numberline {1.10}An\'{a}lisis preliminar}{12}{section.1.10}%
+\contentsline {section}{\numberline {1.11}Propuesta de soluci\'{o}n}{12}{section.1.11}%
+\contentsline {section}{\numberline {1.12}Modelos y herramientas a utilizar}{13}{section.1.12}%
+\contentsline {section}{\numberline {1.13}Cronograma}{15}{section.1.13}%
+\contentsline {chapter}{\numberline {2}Marco Te\'{o}rico}{16}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Metodolog\'{i}a de an\'{a}lisis y dise\~{n}o}{16}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Metodolog\'{i}a de desarrollo}{16}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Fundamentos de Inteligencia Artificial}{17}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Modelos de Lenguaje de Gran Escala (LLM)}{17}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Alucinaci\'{o}n Artificial}{17}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Generaci\'{o}n Aumentada por Recuperaci\'{o}n (RAG)}{18}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Graph RAG: Recuperaci\'{o}n Aumentada sobre Grafo}{18}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}Embeddings Sem\'{a}nticos y Bases de Datos Vectoriales}{19}{subsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.3.6}Bases de Datos de Grafos: Neo4j}{19}{subsection.2.3.6}%
+\contentsline {subsection}{\numberline {2.3.7}LangGraph y Agentes de M\'{u}ltiples Estados}{19}{subsection.2.3.7}%
+\contentsline {subsection}{\numberline {2.3.8}Proceso ETL y Web Scraping}{20}{subsection.2.3.8}%
+\contentsline {section}{\numberline {2.4}Fundamentos Jur\'{i}dicos}{20}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}LegalTech y Acceso a la Justicia}{20}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Marco Normativo Boliviano}{20}{subsection.2.4.2}%
+\contentsline {section}{\numberline {2.5}Tecnolog\'{i}as de Soporte}{21}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}FastAPI}{21}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Next.js 14}{21}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.3}Docker y Contenedorizaci\'{o}n}{22}{subsection.2.5.3}%
+\contentsline {subsection}{\numberline {2.5.4}Infraestructura en la Nube}{22}{subsection.2.5.4}%
+\contentsline {chapter}{\numberline {3}Marco Pr\'{a}ctico}{23}{chapter.3}%
+\contentsline {section}{\numberline {3.1}An\'{a}lisis preliminar}{23}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Determinaci\'{o}n de requerimientos}{24}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Requerimientos funcionales}{24}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Requerimientos no funcionales}{25}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}An\'{a}lisis del proyecto}{26}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Dise\~{n}o UML}{26}{subsection.3.3.1}%
+\contentsline {subsubsection}{Diagramas de Casos de Uso}{26}{subsubsection*.18}%
+\contentsline {paragraph}{M\'{o}dulo 1: Consulta Legal (Core)}{26}{paragraph*.19}%
+\contentsline {paragraph}{M\'{o}dulo 2: Auditor\'{i}a y Trazabilidad}{27}{paragraph*.21}%
+\contentsline {paragraph}{M\'{o}dulo 3: Administraci\'{o}n del Conocimiento (ETL)}{28}{paragraph*.23}%
+\contentsline {subsubsection}{Diagrama de Clases}{29}{subsubsection*.25}%
+\contentsline {subsubsection}{Diagrama de Secuencia}{30}{subsubsection*.27}%
+\contentsline {subsubsection}{Diagramas de Actividades}{31}{subsubsection*.29}%
+\contentsline {section}{\numberline {3.4}Dise\~{n}o del proyecto}{34}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Arquitectura de Software (Modelo C4)}{34}{subsection.3.4.1}%
+\contentsline {subsubsection}{Nivel 1: Diagrama de Contexto}{34}{subsubsection*.32}%
+\contentsline {subsubsection}{Nivel 2: Diagrama de Contenedores}{37}{subsubsection*.34}%
+\contentsline {subsubsection}{Nivel 3: Diagrama de Componentes}{40}{subsubsection*.36}%
+\contentsline {subsubsection}{Nivel 4: Diagrama de C\'{o}digo (ETL)}{42}{subsubsection*.38}%
+\contentsline {subsection}{\numberline {3.4.2}Dise\~{n}o de Experiencia y Prototipado (UX/UI)}{43}{subsection.3.4.2}%
+\contentsline {section}{\numberline {3.5}Base de datos}{43}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Validaci\'{o}n y pruebas del sistema}{44}{section.3.6}%
+\contentsline {section}{\numberline {3.7}An\'{a}lisis de costos}{45}{section.3.7}%
+\contentsline {section}{\numberline {3.8}Desarrollo del Prototipo}{45}{section.3.8}%
+\contentsline {chapter}{\numberline {4}Conclusiones y Recomendaciones}{47}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Conclusiones}{47}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Recomendaciones}{48}{section.4.2}%
+\contentsline {chapter}{Referencias Bibliogr\'{a}ficas}{49}{chapter*.44}%
