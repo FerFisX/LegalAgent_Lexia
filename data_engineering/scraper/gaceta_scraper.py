@@ -1,21 +1,25 @@
 """
-Scraper principal de la Gaceta Oficial de Bolivia.
-Usa Playwright para renderizar el sitio (puede tener JS)
-y BeautifulSoup para parsear el HTML resultante.
+Scraper de la Gaceta Oficial de Bolivia.
+URL real: http://www.gacetaoficialdebolivia.gob.bo
 
-Detecta nuevos documentos comparando hashes y descarga
-solo los que hayan cambiado o sean nuevos.
+El sitio usa Drupal 10 con HTML server-side (NO necesita Playwright).
+Usamos httpx + BeautifulSoup directamente.
+
+Estructura del sitio:
+  Leyes:      /normas/listadonor/10/page:{N}
+  Decretos:   /normas/listadonor/11/page:{N}
+  Resoluc.:   /normas/listadonor/16/page:{N}
+  PDF:        /normas/descargarNrms/{ID}
 """
 
 import asyncio
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from urllib.parse import urljoin, urlparse
 
+import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
-from playwright.async_api import async_playwright, Page
 
 from data_engineering.scraper.change_detector import (
     compute_hash,
@@ -27,152 +31,170 @@ from data_engineering.scraper.downloader import download_many
 
 # ── Configuración ──────────────────────────────────────────────────────────────
 
-GACETA_BASE_URL = "https://gacetaoficial.bo"
+GACETA_BASE_URL = "http://www.gacetaoficialdebolivia.gob.bo"
 
-# Tipos de documentos que nos interesan con sus URLs de listado
 DOCUMENT_SECTIONS = {
-    "ley": "/leyes",
-    "decreto_supremo": "/decretos-supremos",
-    "decreto_presidencial": "/decretos-presidenciales",
-    "resolucion_ministerial": "/resoluciones-ministeriales",
-    "resolucion_suprema": "/resoluciones-supremas",
+    "ley":                  "/normas/listadonor/10",
+    "decreto_supremo":      "/normas/listadonor/11",
+    "resolucion_suprema":   "/normas/listadonor/16",
 }
 
-# Áreas legales para clasificación temprana (enriquecido luego por el parser)
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "LexiaBot/1.0 (Proyecto de Grado UPDS Bolivia)"
+    ),
+    "Accept-Language": "es-BO,es;q=0.9",
+}
+
 AREA_KEYWORDS = {
-    "penal": ["penal", "delito", "crimen", "sanción penal", "código penal"],
-    "civil": ["civil", "contrato", "propiedad", "sucesión", "familia"],
-    "laboral": ["laboral", "trabajo", "empleador", "trabajador", "salario", "despido"],
-    "tránsito": ["tránsito", "transporte", "vehículo", "conductor", "accidente vial"],
-    "comercial": ["comercial", "empresa", "sociedad", "mercantil"],
-    "administrativo": ["administrativo", "estado", "gobierno", "municipal", "concesión"],
-    "constitucional": ["constitución", "derechos", "garantías", "tribunal constitucional"],
-    "tributario": ["tributario", "impuesto", "renta", "iva", "aduana"],
+    "penal":          ["penal", "delito", "crimen", "sanción", "código penal"],
+    "civil":          ["civil", "contrato", "propiedad", "sucesión", "familia"],
+    "laboral":        ["laboral", "trabajo", "empleador", "trabajador", "salario"],
+    "tránsito":       ["tránsito", "transporte", "vehículo", "conductor"],
+    "comercial":      ["comercial", "empresa", "sociedad", "mercantil"],
+    "administrativo": ["administrativo", "estado", "gobierno", "municipal"],
+    "constitucional": ["constitución", "derechos", "garantías"],
+    "tributario":     ["tributario", "impuesto", "renta", "aduana"],
 }
 
 
-# ── Modelos de datos ───────────────────────────────────────────────────────────
+# ── Modelos ────────────────────────────────────────────────────────────────────
 
 @dataclass
 class GacetaDocument:
-    """Representa un documento encontrado en la Gaceta Oficial."""
-    doc_id: str                    # ID único (ej: "ley_1234")
-    tipo: str                      # ley / decreto_supremo / etc.
+    doc_id: str
+    tipo: str
     titulo: str
-    numero: str                    # Número de ley/decreto
+    numero: str
     fecha_publicacion: str
-    url_detalle: str               # URL de la página de detalle
-    url_pdf: str | None = None     # URL directa al PDF
+    url_detalle: str
+    url_pdf: str | None = None
     areas_detectadas: list[str] = field(default_factory=list)
     hash_actual: str = ""
 
 
-# ── Funciones de scraping ──────────────────────────────────────────────────────
-
-async def _get_page_html(page: Page, url: str) -> str:
-    """Navega a una URL y retorna el HTML renderizado."""
-    await page.goto(url, wait_until="networkidle", timeout=30000)
-    return await page.content()
-
+# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _detect_areas(text: str) -> list[str]:
-    """Detecta áreas legales por keywords en el título/texto."""
     text_lower = text.lower()
     return [
-        area
-        for area, keywords in AREA_KEYWORDS.items()
-        if any(kw in text_lower for kw in keywords)
+        area for area, kws in AREA_KEYWORDS.items()
+        if any(kw in text_lower for kw in kws)
     ]
 
 
-def _extract_pdf_url(html: str, base_url: str) -> str | None:
-    """Extrae la URL del PDF desde la página de detalle del documento."""
-    soup = BeautifulSoup(html, "lxml")
-
-    # Buscar enlaces directos a PDF
-    for tag in soup.find_all("a", href=True):
-        href = tag["href"]
-        if href.lower().endswith(".pdf"):
-            return urljoin(base_url, href)
-
-    # Buscar iframes con PDF embebido
-    for iframe in soup.find_all("iframe", src=True):
-        src = iframe["src"]
-        if ".pdf" in src.lower():
-            return urljoin(base_url, src)
-
-    # Buscar por texto del enlace
-    for tag in soup.find_all("a", href=True):
-        if any(kw in tag.get_text().lower() for kw in ["descargar", "pdf", "ver documento"]):
-            return urljoin(base_url, tag["href"])
-
-    return None
+async def _fetch_html(url: str, client: httpx.AsyncClient) -> str | None:
+    """Descarga HTML de una URL con manejo de errores."""
+    try:
+        await asyncio.sleep(1.5)  # cortesía al servidor
+        response = await client.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        logger.warning(f"Error fetch {url}: {e}")
+        return None
 
 
-def _parse_document_list(html: str, tipo: str, base_url: str) -> list[GacetaDocument]:
+# ── Parser de listado ──────────────────────────────────────────────────────────
+
+def _parse_listing(html: str, tipo: str) -> list[GacetaDocument]:
     """
-    Parsea el listado de documentos de una sección de la Gaceta.
-    Retorna lista de GacetaDocument con metadata básica.
+    Parsea la página de listado de normas.
+    Estructura HTML real de gacetaoficialdebolivia.gob.bo
     """
     soup = BeautifulSoup(html, "lxml")
     documents = []
 
-    # Buscar filas de tabla o cards de documento
-    # La Gaceta Oficial Bolivia usa estructura de tabla o lista
-    rows = soup.select("table tr, .documento-item, .gaceta-item, article")
+    # Buscar filas de normas — el sitio usa tablas o divs con clase 'views-row'
+    rows = soup.select("table tbody tr, .views-row, .norma-item")
 
+    # Fallback: buscar todos los links que apuntan a /normas/verGratis_gob/
+    if not rows:
+        links = soup.find_all("a", href=re.compile(r"/normas/verGratis_gob/\d+"))
+        for link in links:
+            try:
+                url_detalle = GACETA_BASE_URL + link["href"]
+                # Extraer ID del URL
+                match = re.search(r"/(\d+)$", link["href"])
+                if not match:
+                    continue
+                doc_id_num = match.group(1)
+                titulo = link.get_text(strip=True) or f"{tipo}_{doc_id_num}"
+
+                # Buscar número en el texto del link o alrededor
+                numero = ""
+                num_match = re.search(r"[Nn][°º]?\s*(\d+)", titulo)
+                if num_match:
+                    numero = num_match.group(1)
+
+                doc_id = f"{tipo}_{doc_id_num}"
+                areas = _detect_areas(titulo)
+                url_pdf = f"{GACETA_BASE_URL}/normas/descargarNrms/{doc_id_num}"
+
+                documents.append(GacetaDocument(
+                    doc_id=doc_id,
+                    tipo=tipo,
+                    titulo=titulo,
+                    numero=numero,
+                    fecha_publicacion="",
+                    url_detalle=url_detalle,
+                    url_pdf=url_pdf,
+                    areas_detectadas=areas,
+                ))
+            except Exception as e:
+                logger.debug(f"Error parseando link: {e}")
+                continue
+        return documents
+
+    # Si hay filas de tabla
     for row in rows:
         try:
-            # Extraer título
-            titulo_tag = row.select_one("td a, .titulo, h3, h4, .nombre-documento")
-            if not titulo_tag:
-                continue
-            titulo = titulo_tag.get_text(strip=True)
-            if not titulo or len(titulo) < 5:
+            link = row.find("a", href=re.compile(r"/normas/verGratis_gob/\d+"))
+            if not link:
+                # Buscar link de descarga PDF directa
+                link = row.find("a", href=re.compile(r"/normas/descargarNrms/\d+"))
+            if not link:
                 continue
 
-            # Extraer URL de detalle
-            link_tag = row.select_one("a[href]")
-            if not link_tag:
+            href = link["href"]
+            match = re.search(r"/(\d+)$", href)
+            if not match:
                 continue
-            url_detalle = urljoin(base_url, link_tag["href"])
+            doc_id_num = match.group(1)
 
-            # Extraer número de documento
+            titulo = link.get_text(strip=True)
+            if not titulo:
+                titulo_tag = row.find(["td", "div", "span"], class_=re.compile(r"titulo|nombre|title"))
+                titulo = titulo_tag.get_text(strip=True) if titulo_tag else f"{tipo}_{doc_id_num}"
+
             numero = ""
-            numero_tag = row.select_one(".numero, .num-doc, td:nth-child(2)")
-            if numero_tag:
-                numero = numero_tag.get_text(strip=True)
-            else:
-                # Intentar extraer del título (ej: "Ley N° 1234")
-                match = re.search(r"[Nn][°º]\s*(\d+)", titulo)
-                if match:
-                    numero = match.group(1)
+            num_match = re.search(r"[Nn][°º]?\s*(\d+)", titulo)
+            if num_match:
+                numero = num_match.group(1)
 
-            # Extraer fecha
             fecha = ""
-            fecha_tag = row.select_one(".fecha, .date, td:nth-child(3)")
+            fecha_tag = row.find(["td", "span"], class_=re.compile(r"fecha|date"))
             if fecha_tag:
                 fecha = fecha_tag.get_text(strip=True)
 
-            # Generar ID único
-            doc_id = f"{tipo}_{numero}" if numero else f"{tipo}_{hash(url_detalle)}"
-
-            # Detectar áreas por título
+            doc_id = f"{tipo}_{doc_id_num}"
             areas = _detect_areas(titulo)
+            url_pdf = f"{GACETA_BASE_URL}/normas/descargarNrms/{doc_id_num}"
+            url_detalle = f"{GACETA_BASE_URL}/normas/verGratis_gob/{doc_id_num}"
 
-            doc = GacetaDocument(
+            documents.append(GacetaDocument(
                 doc_id=doc_id,
                 tipo=tipo,
                 titulo=titulo,
                 numero=numero,
                 fecha_publicacion=fecha,
                 url_detalle=url_detalle,
+                url_pdf=url_pdf,
                 areas_detectadas=areas,
-            )
-            documents.append(doc)
-
+            ))
         except Exception as e:
-            logger.warning(f"Error parseando fila: {e}")
+            logger.debug(f"Error parseando fila: {e}")
             continue
 
     return documents
@@ -183,19 +205,11 @@ def _parse_document_list(html: str, tipo: str, base_url: str) -> list[GacetaDocu
 async def scrape_gaceta(
     sections: list[str] | None = None,
     max_pages: int = 5,
-    delay_seconds: float = 2.0,
+    delay_seconds: float = 1.5,
 ) -> list[GacetaDocument]:
     """
-    Scraper principal. Recorre las secciones de la Gaceta Oficial,
-    detecta documentos nuevos o modificados y los prepara para descarga.
-
-    Args:
-        sections: Lista de tipos a scrapear. Si None, scrapea todos.
-        max_pages: Páginas máximas por sección (paginación).
-        delay_seconds: Delay de cortesía entre requests.
-
-    Returns:
-        Lista de documentos con cambios detectados listos para descargar.
+    Scrapea la Gaceta Oficial usando httpx (sin navegador).
+    Detecta documentos nuevos comparando hashes.
     """
     target_sections = {
         k: v for k, v in DOCUMENT_SECTIONS.items()
@@ -204,117 +218,85 @@ async def scrape_gaceta(
 
     new_or_changed: list[GacetaDocument] = []
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
-        context = await browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "LexiaBot/1.0 (Proyecto de Grado - UPDS Bolivia)"
-            )
-        )
-        page = await context.new_page()
-
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         for tipo, path in target_sections.items():
             logger.info(f"Scrapeando sección: {tipo}")
 
             for page_num in range(1, max_pages + 1):
-                url = f"{GACETA_BASE_URL}{path}?page={page_num}"
+                # Paginación real: /normas/listadonor/10/page:{N}
+                if page_num == 1:
+                    url = f"{GACETA_BASE_URL}{path}"
+                else:
+                    url = f"{GACETA_BASE_URL}{path}/page:{page_num}"
 
-                try:
-                    html = await _get_page_html(page, url)
-                    page_hash = compute_hash(html)
-
-                    # Detectar si esta página del listado cambió
-                    page_id = f"listing_{tipo}_page{page_num}"
-                    if not has_changed(page_id, page_hash):
-                        logger.debug(f"Sin cambios en listado: {page_id}")
-                        break  # Si la página no cambió, las siguientes tampoco
-
-                    documents = _parse_document_list(html, tipo, GACETA_BASE_URL)
-
-                    if not documents:
-                        logger.info(f"No se encontraron documentos en página {page_num}, fin de sección.")
-                        break
-
-                    # Para cada documento, obtener URL del PDF y verificar cambios
-                    for doc in documents:
-                        try:
-                            detail_html = await _get_page_html(page, doc.url_detalle)
-                            doc_hash = compute_hash(detail_html)
-
-                            if has_changed(doc.doc_id, doc_hash):
-                                pdf_url = _extract_pdf_url(detail_html, GACETA_BASE_URL)
-                                doc.url_pdf = pdf_url
-                                doc.hash_actual = doc_hash
-                                new_or_changed.append(doc)
-                                logger.info(f"Nuevo/Modificado: [{doc.tipo}] {doc.titulo[:60]}")
-
-                            await asyncio.sleep(delay_seconds)
-
-                        except Exception as e:
-                            logger.error(f"Error procesando documento {doc.doc_id}: {e}")
-                            continue
-
-                    update_checkpoint(page_id, page_hash)
-
-                except Exception as e:
-                    logger.error(f"Error en página {url}: {e}")
+                html = await _fetch_html(url, client)
+                if not html:
+                    logger.warning(f"No se pudo obtener: {url}")
                     break
 
-        await browser.close()
+                page_hash = compute_hash(html)
+                page_id = f"listing_{tipo}_page{page_num}"
 
-    logger.success(f"Scraping completo. Documentos nuevos/modificados: {len(new_or_changed)}")
+                if not has_changed(page_id, page_hash):
+                    logger.debug(f"Sin cambios en: {page_id}")
+                    break
+
+                documents = _parse_listing(html, tipo)
+                if not documents:
+                    logger.info(f"Sin documentos en página {page_num}, fin de sección.")
+                    break
+
+                logger.info(f"  {tipo} pág.{page_num}: {len(documents)} documentos encontrados")
+
+                for doc in documents:
+                    doc_hash = compute_hash(doc.url_pdf or doc.doc_id)
+                    if has_changed(doc.doc_id, doc_hash):
+                        doc.hash_actual = doc_hash
+                        new_or_changed.append(doc)
+
+                update_checkpoint(page_id, page_hash)
+
+    logger.success(f"Scraping completo: {len(new_or_changed)} documentos nuevos/modificados")
     return new_or_changed
 
 
 async def run_scraper_and_download(
     sections: list[str] | None = None,
     max_pages: int = 5,
-    delay_seconds: float = 2.0,
+    delay_seconds: float = 1.5,
 ) -> list[dict]:
-    """
-    Ejecuta el scraper completo: detecta cambios, descarga PDFs
-    y actualiza checkpoints.
-
-    Returns:
-        Lista de dicts con metadata de cada documento procesado.
-    """
+    """Pipeline completo: scraping + descarga de PDFs + checkpoints."""
     documents = await scrape_gaceta(sections, max_pages, delay_seconds)
 
     if not documents:
-        logger.info("No hay documentos nuevos para descargar.")
+        logger.info("No hay documentos nuevos.")
         return []
 
-    # Preparar tareas de descarga solo para docs con PDF
+    # Descargar PDFs
     download_tasks = [
         {
             "url": doc.url_pdf,
             "filename": f"{doc.doc_id}.pdf",
             "subfolder": doc.tipo,
         }
-        for doc in documents
-        if doc.url_pdf
+        for doc in documents if doc.url_pdf
     ]
 
     if download_tasks:
         await download_many(download_tasks, delay_seconds=delay_seconds)
 
-    # Actualizar checkpoints de documentos procesados
+    # Actualizar checkpoints y retornar metadata
     results = []
     for doc in documents:
         if doc.hash_actual:
-            update_checkpoint(
-                doc.doc_id,
-                doc.hash_actual,
-                metadata={
-                    "tipo": doc.tipo,
-                    "titulo": doc.titulo,
-                    "numero": doc.numero,
-                    "fecha": doc.fecha_publicacion,
-                    "url": doc.url_detalle,
-                    "areas": doc.areas_detectadas,
-                },
-            )
+            update_checkpoint(doc.doc_id, doc.hash_actual, metadata={
+                "tipo": doc.tipo,
+                "titulo": doc.titulo,
+                "numero": doc.numero,
+                "fecha": doc.fecha_publicacion,
+                "url": doc.url_detalle,
+                "areas": doc.areas_detectadas,
+            })
         results.append({
             "doc_id": doc.doc_id,
             "tipo": doc.tipo,
@@ -328,17 +310,15 @@ async def run_scraper_and_download(
     return results
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     import sys
-    from loguru import logger
-
     logger.remove()
     logger.add(sys.stdout, level="INFO")
-    logger.add("logs/scraper.log", rotation="10 MB", level="DEBUG")
 
-    results = asyncio.run(run_scraper_and_download(max_pages=3))
-    logger.info(f"Total procesados: {len(results)}")
+    results = asyncio.run(run_scraper_and_download(
+        sections=["ley"],
+        max_pages=2,
+    ))
+    logger.info(f"Total: {len(results)} documentos")
     for r in results[:5]:
         logger.info(f"  → {r['tipo']} | {r['titulo'][:60]}")

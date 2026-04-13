@@ -1,126 +1,121 @@
 """
-Almacén vectorial en ChromaDB para los chunks legales.
-Gestiona inserción, actualización y búsqueda semántica.
+Almacén vectorial usando LanceDB.
+Reemplaza ChromaDB — misma interfaz, sin necesidad de compilación en Windows.
+
+LanceDB almacena los vectores en disco localmente (data/lancedb/).
 """
 
 import os
-from loguru import logger
+from pathlib import Path
 
-import chromadb
-from chromadb.config import Settings
+import lancedb
+import pyarrow as pa
+from loguru import logger
 
 from data_engineering.chunking.chunker import LegalChunk
 from data_engineering.embeddings.embedding_engine import embed_chunks, embed_query
 
 
 # ── Configuración ─────────────────────────────────────────────────────────────
-CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "lexia_legal_docs")
-
-# Para desarrollo local usamos persistencia en disco (sin servidor)
-CHROMA_LOCAL_PATH = "data/chroma_db"
+LANCEDB_PATH = "data/lancedb"
+TABLE_NAME = os.getenv("CHROMA_COLLECTION", "lexia_legal_docs")  # mismo env var
+EMBEDDING_DIMS = 1024
 
 
-# ── Cliente ChromaDB ──────────────────────────────────────────────────────────
+# ── Schema de la tabla ────────────────────────────────────────────────────────
 
-def _get_client() -> chromadb.ClientAPI:
-    """
-    Retorna cliente ChromaDB.
-    En desarrollo: persistencia local en disco.
-    En producción: HttpClient apuntando al contenedor.
-    """
-    env = os.getenv("ENV", "development")
+def _get_schema() -> pa.Schema:
+    return pa.schema([
+        pa.field("chunk_id", pa.string()),
+        pa.field("text", pa.string()),
+        pa.field("vector", pa.list_(pa.float32(), EMBEDDING_DIMS)),
+        pa.field("doc_id", pa.string()),
+        pa.field("tipo", pa.string()),
+        pa.field("numero_doc", pa.string()),
+        pa.field("titulo_doc", pa.string()),
+        pa.field("fecha_publicacion", pa.string()),
+        pa.field("article_number", pa.int32()),
+        pa.field("chapter", pa.string()),
+        pa.field("title_section", pa.string()),
+        pa.field("areas", pa.string()),
+        pa.field("cross_references", pa.string()),
+        pa.field("is_derogated", pa.bool_()),
+        pa.field("chunk_index", pa.int32()),
+        pa.field("total_chunks_in_article", pa.int32()),
+    ])
 
-    if env == "production":
-        return chromadb.HttpClient(
-            host=CHROMA_HOST,
-            port=CHROMA_PORT,
-            settings=Settings(anonymized_telemetry=False),
-        )
+
+def _get_table() -> lancedb.table.Table:
+    """Obtiene o crea la tabla en LanceDB."""
+    Path(LANCEDB_PATH).mkdir(parents=True, exist_ok=True)
+    db = lancedb.connect(LANCEDB_PATH)
+
+    if TABLE_NAME in db.table_names():
+        return db.open_table(TABLE_NAME)
     else:
-        # Desarrollo: base vectorial local en disco
-        return chromadb.PersistentClient(
-            path=CHROMA_LOCAL_PATH,
-            settings=Settings(anonymized_telemetry=False),
-        )
-
-
-def _get_collection() -> chromadb.Collection:
-    """Obtiene o crea la colección principal de documentos legales."""
-    client = _get_client()
-    collection = client.get_or_create_collection(
-        name=CHROMA_COLLECTION,
-        metadata={"hnsw:space": "cosine"},  # similitud coseno
-    )
-    return collection
+        return db.create_table(TABLE_NAME, schema=_get_schema())
 
 
 # ── Operaciones CRUD ──────────────────────────────────────────────────────────
 
 def upsert_chunks(chunks: list[LegalChunk]) -> int:
     """
-    Inserta o actualiza chunks en ChromaDB con sus embeddings.
-    Usa upsert para que sea idempotente (re-ejecutable sin duplicados).
-
-    Args:
-        chunks: Lista de LegalChunk a indexar.
-
-    Returns:
-        Cantidad de chunks indexados.
+    Inserta o actualiza chunks en LanceDB con sus embeddings.
     """
     if not chunks:
         logger.warning("No hay chunks para indexar.")
         return 0
 
-    collection = _get_collection()
+    table = _get_table()
 
     # Generar embeddings
     chunk_embeddings = embed_chunks(chunks)
 
-    # Preparar datos para ChromaDB
-    ids = [chunk.chunk_id for chunk, _ in chunk_embeddings]
-    embeddings = [emb for _, emb in chunk_embeddings]
-    documents = [chunk.text for chunk, _ in chunk_embeddings]
-    metadatas = [chunk.to_metadata() for chunk, _ in chunk_embeddings]
+    # Preparar registros
+    records = []
+    for chunk, embedding in chunk_embeddings:
+        meta = chunk.to_metadata()
+        records.append({
+            "chunk_id": chunk.chunk_id,
+            "text": chunk.text,
+            "vector": embedding,
+            "doc_id": meta["doc_id"],
+            "tipo": meta["tipo"],
+            "numero_doc": meta["numero_doc"],
+            "titulo_doc": meta["titulo_doc"],
+            "fecha_publicacion": meta["fecha_publicacion"],
+            "article_number": int(meta["article_number"]),
+            "chapter": meta["chapter"],
+            "title_section": meta["title_section"],
+            "areas": meta["areas"],
+            "cross_references": meta["cross_references"],
+            "is_derogated": bool(meta["is_derogated"]),
+            "chunk_index": int(meta["chunk_index"]),
+            "total_chunks_in_article": int(meta["total_chunks_in_article"]),
+        })
 
-    # Upsert en batches de 100 (límite recomendado por ChromaDB)
-    batch_size = 100
-    total = 0
+    # Eliminar registros anteriores del mismo doc para upsert limpio
+    if records:
+        doc_ids = list({r["doc_id"] for r in records})
+        try:
+            for doc_id in doc_ids:
+                table.delete(f"doc_id = '{doc_id}'")
+        except Exception:
+            pass  # tabla vacía, no hay nada que borrar
 
-    for i in range(0, len(ids), batch_size):
-        batch_ids = ids[i:i + batch_size]
-        batch_embs = embeddings[i:i + batch_size]
-        batch_docs = documents[i:i + batch_size]
-        batch_metas = metadatas[i:i + batch_size]
-
-        collection.upsert(
-            ids=batch_ids,
-            embeddings=batch_embs,
-            documents=batch_docs,
-            metadatas=batch_metas,
-        )
-        total += len(batch_ids)
-        logger.debug(f"Indexados {total}/{len(ids)} chunks")
-
-    logger.success(f"ChromaDB: {total} chunks indexados en '{CHROMA_COLLECTION}'")
-    return total
+    table.add(records)
+    logger.success(f"LanceDB: {len(records)} chunks indexados en '{TABLE_NAME}'")
+    return len(records)
 
 
 def delete_doc_chunks(doc_id: str) -> None:
-    """
-    Elimina todos los chunks de un documento específico.
-    Útil cuando una ley es actualizada o derogada.
-    """
-    collection = _get_collection()
-
-    # Buscar todos los chunks del documento
-    results = collection.get(where={"doc_id": doc_id})
-    if results["ids"]:
-        collection.delete(ids=results["ids"])
-        logger.info(f"Eliminados {len(results['ids'])} chunks de: {doc_id}")
-    else:
-        logger.debug(f"No se encontraron chunks para eliminar: {doc_id}")
+    """Elimina todos los chunks de un documento."""
+    try:
+        table = _get_table()
+        table.delete(f"doc_id = '{doc_id}'")
+        logger.info(f"Eliminados chunks de: {doc_id}")
+    except Exception as e:
+        logger.debug(f"No se pudo eliminar chunks de {doc_id}: {e}")
 
 
 def search(
@@ -131,68 +126,61 @@ def search(
     exclude_derogated: bool = True,
 ) -> list[dict]:
     """
-    Búsqueda semántica en ChromaDB.
-
-    Args:
-        query: Consulta en lenguaje natural del usuario.
-        n_results: Número de resultados a retornar.
-        filter_areas: Filtrar por áreas legales (ej: ["penal", "civil"]).
-        filter_tipo: Filtrar por tipo de documento (ej: "ley").
-        exclude_derogated: Excluir artículos derogados.
-
-    Returns:
-        Lista de dicts con texto, metadata y distancia.
+    Búsqueda semántica en LanceDB.
     """
-    collection = _get_collection()
+    table = _get_table()
     query_embedding = embed_query(query)
 
-    # Construir filtros where de ChromaDB
-    where_conditions = []
+    # Búsqueda vectorial
+    search_query = table.search(query_embedding).limit(n_results * 2)
 
+    results_df = search_query.to_pandas()
+
+    if results_df.empty:
+        return []
+
+    # Filtros en pandas (más simple que SQL en LanceDB)
     if exclude_derogated:
-        where_conditions.append({"is_derogated": False})
+        results_df = results_df[results_df["is_derogated"] == False]
 
     if filter_tipo:
-        where_conditions.append({"tipo": filter_tipo})
+        results_df = results_df[results_df["tipo"] == filter_tipo]
 
     if filter_areas:
-        # ChromaDB no soporta OR en listas directamente,
-        # filtramos por la primera área (refinamos en reranker)
-        where_conditions.append({"areas": {"$contains": filter_areas[0]}})
+        mask = results_df["areas"].apply(
+            lambda a: any(area in a for area in filter_areas)
+        )
+        results_df = results_df[mask]
 
-    where = None
-    if len(where_conditions) == 1:
-        where = where_conditions[0]
-    elif len(where_conditions) > 1:
-        where = {"$and": where_conditions}
+    results_df = results_df.head(n_results)
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results,
-        where=where,
-        include=["documents", "metadatas", "distances"],
-    )
-
-    # Formatear resultados
     formatted = []
-    for i in range(len(results["ids"][0])):
+    for _, row in results_df.iterrows():
         formatted.append({
-            "chunk_id": results["ids"][0][i],
-            "text": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i],
-            "distance": results["distances"][0][i],
-            "similarity": 1 - results["distances"][0][i],  # cosine similarity
+            "chunk_id": row["chunk_id"],
+            "text": row["text"],
+            "metadata": {
+                "doc_id": row["doc_id"],
+                "tipo": row["tipo"],
+                "titulo_doc": row["titulo_doc"],
+                "article_number": row["article_number"],
+                "chapter": row["chapter"],
+                "areas": row["areas"],
+                "is_derogated": row["is_derogated"],
+            },
+            "distance": float(row.get("_distance", 0)),
+            "similarity": 1 - float(row.get("_distance", 0)),
         })
 
-    logger.debug(f"ChromaDB search: {len(formatted)} resultados para '{query[:50]}...'")
+    logger.debug(f"LanceDB search: {len(formatted)} resultados para '{query[:50]}'")
     return formatted
 
 
 def get_collection_stats() -> dict:
-    """Retorna estadísticas de la colección."""
-    collection = _get_collection()
-    count = collection.count()
+    """Estadísticas de la tabla."""
+    table = _get_table()
     return {
-        "collection": CHROMA_COLLECTION,
-        "total_chunks": count,
+        "table": TABLE_NAME,
+        "total_chunks": table.count_rows(),
+        "path": LANCEDB_PATH,
     }

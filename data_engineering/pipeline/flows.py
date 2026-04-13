@@ -164,7 +164,7 @@ def task_index(parsed_law) -> bool:
     version="1.0.0",
 )
 async def gaceta_pipeline(
-    sections: list[str] = None,
+    sections: list[str] = [],
     max_pages: int = 5,
     force_all: bool = False,
 ) -> dict:
@@ -183,8 +183,8 @@ async def gaceta_pipeline(
     pf_logger.info("=== LEXIA PIPELINE INICIADO ===")
     start = datetime.utcnow()
 
-    # 1. Scraping
-    scraped_docs = await task_scrape(sections=sections, max_pages=max_pages)
+    # 1. Scraping (lista vacía = todas las secciones)
+    scraped_docs = await task_scrape(sections=sections if sections else None, max_pages=max_pages)
 
     if not scraped_docs and not force_all:
         pf_logger.info("No hay documentos nuevos. Pipeline finalizado.")
@@ -235,7 +235,7 @@ def init_pipeline() -> None:
     pf_logger.info("Insertando datos base (áreas, procesos, abogados)...")
     seed_base_data()
 
-    pf_logger.success("Sistema inicializado correctamente.")
+    pf_logger.info("Sistema inicializado correctamente.")
 
 
 # ── Entry points ──────────────────────────────────────────────────────────────
@@ -248,6 +248,6 @@ if __name__ == "__main__":
     if command == "init":
         init_pipeline()
     elif command == "pipeline":
-        asyncio.run(gaceta_pipeline(max_pages=3))
+        asyncio.run(gaceta_pipeline(sections=[], max_pages=3))
     else:
         print("Uso: python flows.py [init|pipeline]")

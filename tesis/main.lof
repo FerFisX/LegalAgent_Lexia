@@ -1,0 +1,26 @@
+\babel@toc {spanish}{}\relax 
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {1.1}{\ignorespaces Interfaz de la aplicaci\'{o}n DoNotPay.}}{3}{figure.caption.4}%
+\contentsline {figure}{\numberline {1.2}{\ignorespaces LawBot, sistema de orientaci\'{o}n legal desarrollado en Cambridge.}}{4}{figure.caption.5}%
+\contentsline {figure}{\numberline {1.3}{\ignorespaces Diagrama de Causa-Efecto (Ishikawa) sobre la brecha de acceso a la justicia.}}{7}{figure.caption.6}%
+\contentsline {figure}{\numberline {1.4}{\ignorespaces Modelo conceptual de la transformaci\'{o}n del acceso a la informaci\'{o}n legal.}}{13}{figure.caption.7}%
+\contentsline {figure}{\numberline {1.5}{\ignorespaces Diagrama de Gantt: Cronograma de implementaci\'{o}n para Taller de Grado~II.}}{15}{figure.caption.10}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Diagrama del proceso ETL para la normativa legal.}}{20}{figure.caption.12}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Modelo de Responsabilidad Compartida en la Nube.}}{22}{figure.caption.14}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Diagrama del pipeline de procesamiento de consultas legales (Graph RAG).}}{23}{figure.caption.15}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Diagrama de Caso de Uso: Interacci\'{o}n de consulta Graph RAG.}}{26}{figure.caption.20}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Diagrama de Caso de Uso: Supervisi\'{o}n y Auditor\'{i}a.}}{27}{figure.caption.22}%
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Diagrama de Caso de Uso: Mantenimiento de la Base de Conocimiento.}}{28}{figure.caption.24}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Diagrama de Clases: Arquitectura de capas del sistema LexIA.}}{29}{figure.caption.26}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Diagrama de Secuencia: Orquestaci\'{o}n del flujo Graph RAG con LangGraph.}}{30}{figure.caption.28}%
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Diagrama de Actividades: Interacci\'{o}n del usuario con LexIA.}}{31}{figure.caption.30}%
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Diagrama de Actividades: Algoritmo de actualizaci\'{o}n ETL con control de fallos.}}{32}{figure.caption.31}%
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Diagrama de Contexto (C4): Fronteras y dependencias externas de LexIA.}}{34}{figure.caption.33}%
+\contentsline {figure}{\numberline {3.10}{\ignorespaces Diagrama de Contenedores (C4): Arquitectura de servicios distribuidos.}}{37}{figure.caption.35}%
+\contentsline {figure}{\numberline {3.11}{\ignorespaces Diagrama de Componentes (C4): Estructura interna del Backend API.}}{40}{figure.caption.37}%
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Diagrama de C\'{o}digo (C4): Dise\~{n}o interno del Pipeline ETL.}}{42}{figure.caption.39}%
+\contentsline {figure}{\numberline {3.13}{\ignorespaces Prototipo de UI: Interfaz principal de consulta en lenguaje natural.}}{43}{figure.caption.40}%
+\contentsline {figure}{\numberline {3.14}{\ignorespaces Prototipo de UI: Presentaci\'{o}n de la orientaci\'{o}n legal y fuentes normativas.}}{43}{figure.caption.41}%
+\addvspace {10\p@ }
