@@ -1,3 +1,12 @@
+# Node.js
+node_modules/
+.next/
+.nuxt/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
 # Entorno virtual
 venv/
 .venv/
