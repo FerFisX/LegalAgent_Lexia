@@ -7,11 +7,21 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from backend.core.config import settings
 
 
+# Usamos pg8000 (Python puro) en lugar de psycopg2 para evitar
+# problemas de encoding con libpq en Windows con locale en espanol.
+_db_url = (
+    f"postgresql+pg8000://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+    f"@127.0.0.1:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+)
+
+import sys
+print(f"[DB] Conectando a: {_db_url}", file=sys.stderr)
+
 engine = create_engine(
-    settings.DATABASE_URL,
+    _db_url,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=5,
+    max_overflow=10,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

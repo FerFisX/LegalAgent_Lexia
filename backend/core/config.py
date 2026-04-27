@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "lexia_user"
     POSTGRES_PASSWORD: str = "lexia_pass"
     POSTGRES_DB: str = "lexia_db"
-    POSTGRES_HOST: str = "localhost"
+    POSTGRES_HOST: str = "127.0.0.1"
     POSTGRES_PORT: int = 5432
 
     @property
@@ -56,6 +56,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8-sig"   # soporta UTF-8 con o sin BOM (Windows)
         extra = "ignore"
 
 

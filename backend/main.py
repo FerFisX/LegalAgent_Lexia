@@ -10,6 +10,7 @@ from loguru import logger
 
 from backend.core.config import settings
 from backend.core.database import engine, Base
+from backend.models import User, Conversation, Message  # noqa: F401 — registra los modelos en Base.metadata
 from backend.api.routes import auth, chat, lawyers
 
 
